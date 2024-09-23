@@ -27,7 +27,7 @@ public partial struct BoidSystem : ISystem
         
         foreach((RefRW<LocalTransform> LocalTransform, RefRW<BoidData> boidData) in SystemAPI.Query<RefRW<LocalTransform>, RefRW<BoidData>>())
         {
-            positions
+            
         }
         
 

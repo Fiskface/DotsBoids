@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using Unity.Burst;
+using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Transforms;
@@ -13,6 +14,8 @@ public partial struct BoidSystem : ISystem
     private const float SeparationWeight = 1.0f;
     private const float VisionRadius = 5.0f;
 
+    private NativeArray<LocalTransform> positions;
+
     public void OnCreate(ref SystemState state)
     {
         state.RequireForUpdate<BoidData>();
@@ -21,12 +24,12 @@ public partial struct BoidSystem : ISystem
     [BurstCompile]
     public void OnUpdate(ref SystemState state)
     {
-        /*
+        
         foreach((RefRW<LocalTransform> LocalTransform, RefRW<BoidData> boidData) in SystemAPI.Query<RefRW<LocalTransform>, RefRW<BoidData>>())
         {
-            //Do boid logic here? He will tell me how to make jobs later
+            positions
         }
-        */
+        
 
         
         BoidJob boidJob = new BoidJob
@@ -58,7 +61,7 @@ public partial struct BoidSystem : ISystem
         public float deltaTime;
 
 
-        //This does the function on every thing that has LocalTransform and BoidData?
+        /*This does the function on every thing that has LocalTransform and BoidData?
         public void Execute(ref LocalTransform localTransform, ref BoidData boidData)
         {
             float3 position = localTransform.Position;
@@ -87,5 +90,6 @@ public partial struct BoidSystem : ISystem
             boidData.velocity += acceleration * deltaTime;
             localTransform.Position += boidData.velocity * deltaTime;
         }
+        */
     }
 }

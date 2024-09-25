@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using Unity.Burst;
@@ -14,7 +15,7 @@ public partial struct BoidSystem : ISystem
     private const float SeparationWeight = 1.0f;
     private const float VisionRadius = 5.0f;
 
-    private NativeArray<LocalTransform> positions;
+    private List<Data> boids;
 
     public void OnCreate(ref SystemState state)
     {
@@ -24,32 +25,33 @@ public partial struct BoidSystem : ISystem
     [BurstCompile]
     public void OnUpdate(ref SystemState state)
     {
-        
-        foreach((RefRW<LocalTransform> LocalTransform, RefRW<BoidData> boidData) in SystemAPI.Query<RefRW<LocalTransform>, RefRW<BoidData>>())
-        {
-            
-        }
-        
+        boids = new List<Data>();
 
-        
+        foreach ((RefRW<LocalTransform> LocalTransform, RefRW<BoidData> boidData) in SystemAPI.Query<RefRW<LocalTransform>, RefRW<BoidData>>())
+        {
+            boids.Add(new Data { boid = boidData.ValueRW, localTransform = LocalTransform.ValueRW });
+        }
+
+
         BoidJob boidJob = new BoidJob
         {
-            deltaTime = SystemAPI.Time.DeltaTime
+            deltaTime = SystemAPI.Time.DeltaTime,
+            boids = boids.ToArray(),
         };
         boidJob.ScheduleParallel();
     }
 
-    private float3 Align(float3 velocity, float3 otherVelocity)
+    public static float3 Align(float3 velocity, float3 otherVelocity)
     {
         return math.normalize(otherVelocity - velocity);
     }
 
-    private float3 Cohere(float3 position, float3 otherPosition)
+    private static float3 Cohere(float3 position, float3 otherPosition)
     {
         return otherPosition - position;
     }
 
-    private float3 Separate(float3 position, float3 otherPosition)
+    private static float3 Separate(float3 position, float3 otherPosition)
     {
         float3 diff = position - otherPosition;
         return math.normalize(diff) / math.length(diff);
@@ -59,37 +61,39 @@ public partial struct BoidSystem : ISystem
     public partial struct BoidJob : IJobEntity
     {
         public float deltaTime;
+        public Data[] boids;
 
-
-        /*This does the function on every thing that has LocalTransform and BoidData?
-        public void Execute(ref LocalTransform localTransform, ref BoidData boidData)
+        public void Execute(ref LocalTransform localTransform, ref BoidData boid)
         {
             float3 position = localTransform.Position;
             float3 acceleration = float3.zero;
 
-            var a = new OverlapSphereCommand() { };
-
-            //This is apparently not allowed, need to go through each one or do a better way of looking through
-            Entities.ForEach((ref LocalTransform otherTransform, ref BoidData otherBoid) =>
+            foreach (var otherBoid in boids)
             {
-                if (localTransform.Equals(otherTransform)) return; // Skip self
+                if (boid.Equals(otherBoid.boid)) return;
 
-                float distance = math.distance(position, otherTranslation.Value);
+                float distance = math.distance(position, otherBoid.localTransform.Position);
                 if (distance < VisionRadius)
                 {
                     // Alignment
-                    acceleration += Align(boid.Velocity, otherBoid.Velocity) * AlignmentWeight;
+                    acceleration += Align(boid.velocity, otherBoid.boid.velocity) * AlignmentWeight;
                     // Cohesion
-                    acceleration += Cohere(position, otherTranslation.Value) * CohesionWeight;
+                    acceleration += Cohere(position, otherBoid.localTransform.Position) * CohesionWeight;
                     // Separation
-                    acceleration += Separate(position, otherTranslation.Value) * SeparationWeight;
+                    acceleration += Separate(position, otherBoid.localTransform.Position) * SeparationWeight;
                 }
-            }).Run();
+            }
 
             // Update velocity and position
-            boidData.velocity += acceleration * deltaTime;
-            localTransform.Position += boidData.velocity * deltaTime;
+            boid.velocity += acceleration * deltaTime;
+            localTransform.Position += boid.velocity * deltaTime;
         }
-        */
+        
+    }
+
+    public struct Data
+    {
+        public LocalTransform localTransform;
+        public BoidData boid;
     }
 }
